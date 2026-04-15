@@ -1,6 +1,7 @@
 import React from 'react';
 import { styles } from './HomeScreen.styles';
 import { View, Text, SafeAreaView, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { BottomNavigation } from '../components/BottomNavigaton';
 
 export const HomeScreen = ({ navigation }: any) => {
   return (
@@ -39,6 +40,7 @@ export const HomeScreen = ({ navigation }: any) => {
           </Text>
         </View>
       </ScrollView>
+      <BottomNavigation navigation={navigation} activeRoute="Home" />
     </SafeAreaView>
   );
 };

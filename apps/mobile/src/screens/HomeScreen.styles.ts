@@ -4,7 +4,7 @@ export const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#0a0a0f' },
     header: { paddingHorizontal: 20, paddingVertical: 16 },
     logo: { color: '#7c6cfa', fontSize: 20, fontWeight: 'bold' },
-    body: { paddingHorizontal: 20, paddingTop: 40 },
+    body: { paddingHorizontal: 20, paddingTop: 40, paddingBottom: 100 },
 
     introSection: { marginBottom: 48 },
     mainTitle: { color: '#fff', fontSize: 28, fontWeight: 'bold', lineHeight: 38 },
