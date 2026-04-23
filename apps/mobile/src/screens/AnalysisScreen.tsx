@@ -21,7 +21,7 @@ export const AnalysisScreen = ({ navigation }: any) => {
             navigation.navigate('Result');
         }, 5000);
         return () => clearTimeout(timer);
-    }, []);
+    }, [navigation]);
 
     return (
         <SafeAreaView style={styles.container}>
