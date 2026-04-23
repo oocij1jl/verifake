@@ -4,8 +4,9 @@ import { styles } from './AnalysisScreen.styles';
 import { ClipboardDocumentCheckIcon } from 'react-native-heroicons/outline';
 import { BottomNavigation } from '../components/BottomNavigaton';
 
-export const AnalysisScreen = ({ navigation }: any) => {
+export const AnalysisScreen = ({ navigation, route }: any) => {
     const [progress, setProgress] = useState(0);
+    const { selectedVideo } = route.params || {};
 
     // 분석 단계들
     const steps = [
@@ -18,7 +19,7 @@ export const AnalysisScreen = ({ navigation }: any) => {
     useEffect(() => {
         // 임시 타이머
         const timer = setTimeout(() => {
-            navigation.navigate('Result');
+            navigation.navigate('Result', { videoUri: selectedVideo });
         }, 5000);
         return () => clearTimeout(timer);
     }, [navigation]);
