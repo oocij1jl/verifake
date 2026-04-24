@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+pydantic
+instaloader
+static-ffmpeg
+python-multipart
