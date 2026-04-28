@@ -1,13 +1,15 @@
 # pyright: reportMissingImports=false, reportMissingModuleSource=false, reportUninitializedInstanceVariable=false
 
 import subprocess
-from pathlib import Path
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks
-from uuid import uuid4
 from datetime import datetime
+from pathlib import Path
+from uuid import uuid4
+
+from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from services.ai.common.job_paths import build_job_paths
+from services.ai.pipelines.video_stage1.detect import run_video_stage1_detection
 from services.backend.services.download import run_download
 from services.backend.services.processor import (
     run_video_stage1_preprocess_job,
@@ -22,6 +24,10 @@ tasks_db = {}
 class VideoStage1PreprocessRequest(BaseModel):
     file_path: str
     job_id: str | None = None
+
+
+class VideoStage1DetectRequest(BaseModel):
+    preprocessing_json: str
 
 
 @router.post("/instagram", summary="인스타그램 영상 수집", tags=["Video"])
@@ -110,3 +116,27 @@ def preprocess_video_stage1(req: VideoStage1PreprocessRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/video-stage1/detect", summary="Stage1 B 탐지 실행", tags=["Video"])
+def detect_video_stage1(req: VideoStage1DetectRequest):
+    preprocessing_json_path = Path(req.preprocessing_json)
+
+    if not preprocessing_json_path.exists():
+        raise HTTPException(
+            status_code=400,
+            detail="preprocessing.json 파일이 존재하지 않습니다.",
+        )
+
+    try:
+        detection = run_video_stage1_detection(str(preprocessing_json_path))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    job_root = preprocessing_json_path.parent.parent
+    return {
+        "job_id": detection["job_id"],
+        "status": detection.get("status", "success"),
+        "detection_json": str(job_root / "output" / "detection.json"),
+        "result_json": str(job_root / "output" / "result.json"),
+    }
