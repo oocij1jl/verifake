@@ -12,6 +12,7 @@ __all__ = [
     "OriginalAudioMetadata",
     "SuspiciousAudioSegment",
     "preprocess_audio",
+    "run_audio_vad",
     "run_antideepfake_inference",
 ]
 
@@ -23,6 +24,10 @@ def __getattr__(name: str):
 
     if name == "preprocess_audio":
         module = import_module(".audio_preprocess", __name__)
+        return getattr(module, name)
+
+    if name == "run_audio_vad":
+        module = import_module(".audio_vad", __name__)
         return getattr(module, name)
 
     if name in {

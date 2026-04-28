@@ -25,6 +25,16 @@
   - `python -m services.ai.audio_pipeline.audio_preprocess --input path/to/input.mp4 --output-dir outputs/audio --json-output outputs/audio/audio_preprocess_result.json`
 - 이 단계는 전처리 전용입니다. VAD, sliding window, AntiDeepfake 추론, fake score 계산은 포함하지 않습니다.
 
+## 오디오 VAD / 음성 구간 태깅
+
+- stage 2 VAD CLI는 `services/ai/audio_pipeline/audio_vad.py`에 둡니다.
+- 실행 예시:
+  - `python -m services.ai.audio_pipeline.audio_vad --preprocess-json outputs/audio/audio_preprocess_result.json --json-output outputs/audio/audio_vad_result.json`
+  - `python -m services.ai.audio_pipeline.audio_vad --input-wav outputs/audio/normalized/sample_16k_mono.wav --json-output outputs/audio/audio_vad_result.json`
+- 이 단계는 normalized wav 전체 타임라인 위에 speech tag와 speech/silence metadata를 남기는 단계입니다.
+- `silero_vad` 가 설치되어 있으면 우선 사용하고, 없으면 energy 기반 fallback으로 동작합니다.
+- sliding window 생성, AntiDeepfake 모델 추론, fake/real score 계산은 포함하지 않습니다.
+
 ### Dependency notes
 
 - Use `services/ai/antideepfake/requirements.txt` for the AntiDeepfake runtime.
