@@ -1,13 +1,27 @@
+# pyright: reportMissingImports=false, reportMissingModuleSource=false, reportUninitializedInstanceVariable=false
+
+import subprocess
+from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks
 from uuid import uuid4
 from datetime import datetime
+from pydantic import BaseModel
 
+from services.ai.common.job_paths import build_job_paths
 from services.backend.services.download import run_download
-from services.backend.services.processor import save_and_split
+from services.backend.services.processor import (
+    run_video_stage1_preprocess_job,
+    save_and_split,
+)
 
 router = APIRouter()
 
 tasks_db = {}
+
+
+class VideoStage1PreprocessRequest(BaseModel):
+    file_path: str
+    job_id: str | None = None
 
 
 @router.post("/instagram", summary="인스타그램 영상 수집", tags=["Video"])
@@ -69,3 +83,30 @@ async def get_status(task_id: str):
         "error": task.get("error"),
         "timestamp": datetime.now().isoformat(),
     }
+
+
+@router.post("/video-stage1/preprocess", summary="Stage1 A 전처리 실행", tags=["Video"])
+def preprocess_video_stage1(req: VideoStage1PreprocessRequest):
+    try:
+        input_path = Path(req.file_path)
+
+        if not input_path.exists():
+            raise HTTPException(status_code=400, detail="파일이 존재하지 않습니다.")
+
+        result = run_video_stage1_preprocess_job(input_path, job_id=req.job_id)
+        job_paths = build_job_paths(result["job_id"])
+
+        return {
+            "job_id": result["job_id"],
+            "status": result["status"],
+            "preprocessing_json": job_paths["preprocessing_json_path"].as_posix(),
+        }
+
+    except subprocess.CalledProcessError:
+        raise HTTPException(status_code=500, detail="ffmpeg 실행 실패")
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
