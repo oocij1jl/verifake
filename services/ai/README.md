@@ -18,6 +18,13 @@
 - Direct vendored entrypoint is:
   - `python services/ai/antideepfake/main.py inference services/ai/antideepfake/hparams/mms_300m_audio_pipeline.yaml --base_path <repo-root> --test_csv <protocol.csv> --ckpt_path services/ai/checkpoints/audio/antideepfake/mms_300m.ckpt`
 
+## 오디오 전처리
+
+- 입력 파일을 내부 분석용 `WAV / mono / 16kHz / pcm_s16le` 형식으로 정규화하는 전처리 CLI는 `services/ai/audio_pipeline/audio_preprocess.py`에 둡니다.
+- 실행 예시:
+  - `python -m services.ai.audio_pipeline.audio_preprocess --input path/to/input.mp4 --output-dir outputs/audio --json-output outputs/audio/audio_preprocess_result.json`
+- 이 단계는 전처리 전용입니다. VAD, sliding window, AntiDeepfake 추론, fake score 계산은 포함하지 않습니다.
+
 ### Dependency notes
 
 - Use `services/ai/antideepfake/requirements.txt` for the AntiDeepfake runtime.
