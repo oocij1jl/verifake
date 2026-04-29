@@ -4,6 +4,7 @@ from pathlib import Path
 # 결과 저장 폴더
 VIDEO_DIR = Path("storage/video")
 AUDIO_DIR = Path("storage/audio")
+MEDIA_SPLIT_TIMEOUT_SEC = 10 * 60
 
 VIDEO_DIR.mkdir(parents=True, exist_ok=True)
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
@@ -20,7 +21,7 @@ def separate_streams(input_file: Path, job_id: str):
         "-an",
         "-c:v", "copy",
         str(video_out)
-    ], check=True)
+    ], check=True, capture_output=True, text=True, timeout=MEDIA_SPLIT_TIMEOUT_SEC)
 
     # 🔊 음성만 추출 (wav)
     subprocess.run([
@@ -31,6 +32,6 @@ def separate_streams(input_file: Path, job_id: str):
         "-ar", "16000",
         "-ac", "1",
         str(audio_out)
-    ], check=True)
+    ], check=True, capture_output=True, text=True, timeout=MEDIA_SPLIT_TIMEOUT_SEC)
 
     return str(video_out), str(audio_out)

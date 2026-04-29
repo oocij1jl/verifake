@@ -35,6 +35,8 @@ def get_audio_python() -> Path:
         raise RuntimeError(f"VERIFAKE_AI_PYTHON 경로가 존재하지 않습니다: {python_path}")
     if not python_path.is_file():
         raise RuntimeError(f"VERIFAKE_AI_PYTHON 경로가 실행 파일이 아닙니다: {python_path}")
+    if not os.access(python_path, os.X_OK):
+        raise RuntimeError(f"VERIFAKE_AI_PYTHON 실행 권한이 없습니다: {python_path}")
 
     return python_path
 
@@ -74,6 +76,18 @@ def run_audio_job(job_id: str, input_path: Path) -> None:
                 stdout=_truncate_log(exc.stdout),
                 stderr=_truncate_log(exc.stderr),
                 error="audio/video split timeout",
+                finished_at=datetime.now().isoformat(),
+            )
+            return
+        except subprocess.CalledProcessError as exc:
+            update_audio_job(
+                job_id,
+                status="FAILED",
+                stage="split",
+                stdout=_truncate_log(getattr(exc, "stdout", None)),
+                stderr=_truncate_log(getattr(exc, "stderr", None)),
+                returncode=exc.returncode,
+                error=_truncate_log(getattr(exc, "stderr", None)) or str(exc),
                 finished_at=datetime.now().isoformat(),
             )
             return

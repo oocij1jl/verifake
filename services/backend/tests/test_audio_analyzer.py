@@ -23,6 +23,19 @@ class AudioAnalyzerTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 get_audio_python()
 
+    def test_non_executable_runtime_path_raises(self) -> None:
+        from services.backend.services.audio_analyzer import get_audio_python
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir) / "python.exe"
+            temp_path.write_text("", encoding="utf-8")
+            with patch.dict("os.environ", {"VERIFAKE_AI_PYTHON": str(temp_path)}, clear=False), patch(
+                "services.backend.services.audio_analyzer.os.access",
+                return_value=False,
+            ):
+                with self.assertRaises(RuntimeError):
+                    get_audio_python()
+
     def test_build_command_uses_audio_stage1_and_expected_paths(self) -> None:
         from services.backend.services.audio_analyzer import build_audio_stage1_command
 
@@ -68,6 +81,9 @@ class AudioAnalyzerTests(unittest.TestCase):
                 return subprocess.CompletedProcess(command, 0, stdout="ok", stderr="")
 
             with patch.dict("os.environ", {"VERIFAKE_AI_PYTHON": str(fake_python)}, clear=False), patch(
+                "services.backend.services.audio_analyzer.os.access",
+                return_value=True,
+            ), patch(
                 "services.backend.services.audio_analyzer.subprocess.run",
                 side_effect=fake_run,
             ):
@@ -91,6 +107,9 @@ class AudioAnalyzerTests(unittest.TestCase):
             create_audio_job("job-2", str(input_path), "storage/jobs/job-2/audio")
 
             with patch.dict("os.environ", {"VERIFAKE_AI_PYTHON": str(fake_python)}, clear=False), patch(
+                "services.backend.services.audio_analyzer.os.access",
+                return_value=True,
+            ), patch(
                 "services.backend.services.audio_analyzer.subprocess.run",
                 return_value=subprocess.CompletedProcess(["cmd"], 1, stdout="bad", stderr="trace"),
             ):
@@ -120,6 +139,9 @@ class AudioAnalyzerTests(unittest.TestCase):
             timeout_exc.stderr = "partial-err"
 
             with patch.dict("os.environ", {"VERIFAKE_AI_PYTHON": str(fake_python)}, clear=False), patch(
+                "services.backend.services.audio_analyzer.os.access",
+                return_value=True,
+            ), patch(
                 "services.backend.services.audio_analyzer.separate_streams",
                 return_value=("storage/video/job-3_video.mp4", "storage/audio/job-3_audio.wav"),
             ), patch(
@@ -146,6 +168,9 @@ class AudioAnalyzerTests(unittest.TestCase):
             create_audio_job("job-4", str(input_path), "storage/jobs/job-4/audio")
 
             with patch.dict("os.environ", {"VERIFAKE_AI_PYTHON": str(fake_python)}, clear=False), patch(
+                "services.backend.services.audio_analyzer.os.access",
+                return_value=True,
+            ), patch(
                 "services.backend.services.audio_analyzer.separate_streams",
                 side_effect=RuntimeError("split failed"),
             ):
@@ -169,6 +194,9 @@ class AudioAnalyzerTests(unittest.TestCase):
             create_audio_job("job-5", str(input_path), "storage/jobs/job-5/audio")
 
             with patch.dict("os.environ", {"VERIFAKE_AI_PYTHON": str(fake_python)}, clear=False), patch(
+                "services.backend.services.audio_analyzer.os.access",
+                return_value=True,
+            ), patch(
                 "services.backend.services.audio_analyzer.separate_streams",
                 return_value=("storage/video/job-5_video.mp4", "storage/audio/job-5_audio.wav"),
             ), patch(
@@ -202,6 +230,9 @@ class AudioAnalyzerTests(unittest.TestCase):
                 return subprocess.CompletedProcess(command, 0, stdout="ok", stderr="")
 
             with patch.dict("os.environ", {"VERIFAKE_AI_PYTHON": str(fake_python)}, clear=False), patch(
+                "services.backend.services.audio_analyzer.os.access",
+                return_value=True,
+            ), patch(
                 "services.backend.services.audio_analyzer.separate_streams",
                 return_value=(f"storage/video/{job_id}_video.mp4", f"storage/audio/{job_id}_audio.wav"),
             ), patch(

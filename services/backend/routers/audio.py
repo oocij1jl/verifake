@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import json
 from pathlib import Path
 from uuid import uuid4
 
@@ -71,4 +72,12 @@ async def get_audio_result(task_id: str):
         raise HTTPException(status_code=404, detail="해당 task_id를 찾을 수 없습니다.")
     if job["status"] != "SUCCEEDED":
         raise HTTPException(status_code=409, detail=f"결과가 아직 준비되지 않았습니다. 현재 상태: {job['status']}")
+    result_path = job.get("result_path")
+    if result_path:
+        resolved_result_path = Path(result_path)
+        if resolved_result_path.exists():
+            try:
+                return json.loads(resolved_result_path.read_text(encoding="utf-8"))
+            except Exception as exc:
+                raise HTTPException(status_code=500, detail=f"결과 파일을 읽을 수 없습니다: {resolved_result_path}") from exc
     return job["result"]

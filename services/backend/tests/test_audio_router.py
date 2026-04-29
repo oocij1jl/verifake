@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import json
 import sys
 import tempfile
 import types
@@ -50,6 +51,23 @@ class AudioRouterTests(unittest.IsolatedAsyncioTestCase):
             await get_audio_result("job-1")
 
         self.assertEqual(context.exception.status_code, 409)
+
+    async def test_result_endpoint_reads_result_file_when_memory_result_missing(self) -> None:
+        from services.backend.routers.audio import get_audio_result
+        from services.backend.tasks import create_audio_job, update_audio_job
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            result_path = temp_path / "audio_stage1_result.json"
+            payload = {"request_id": "job-file", "evidence_level": "sufficient"}
+            result_path.write_text(json.dumps(payload), encoding="utf-8")
+
+            create_audio_job("job-file", "C:/input.wav", str(temp_path))
+            update_audio_job("job-file", status="SUCCEEDED", result=None, result_path=str(result_path))
+
+            result = await get_audio_result("job-file")
+
+        self.assertEqual(result, payload)
 
     async def test_result_endpoint_returns_404_for_unknown_job(self) -> None:
         from services.backend.routers.audio import get_audio_result
