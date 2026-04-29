@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 class ProcessorTests(unittest.TestCase):
     def test_separate_streams_runs_ffmpeg_with_timeout_and_capture(self) -> None:
-        from services.backend.processor import AUDIO_DIR, VIDEO_DIR, MEDIA_SPLIT_TIMEOUT_SEC, separate_streams
+        from services.backend.services.processor import AUDIO_DIR, VIDEO_DIR, MEDIA_SPLIT_TIMEOUT_SEC, separate_streams
 
         calls: list[tuple[list[str], dict[str, object]]] = []
 
@@ -16,7 +16,7 @@ class ProcessorTests(unittest.TestCase):
             calls.append((command, kwargs))
             return subprocess.CompletedProcess(command, 0, stdout="ok", stderr="")
 
-        with patch("services.backend.processor.subprocess.run", side_effect=fake_run):
+        with patch("services.backend.services.processor.subprocess.run", side_effect=fake_run):
             video_path, audio_path = separate_streams(Path("input.mp4"), "job-1")
 
         self.assertEqual(video_path, str(VIDEO_DIR / "job-1_video.mp4"))
