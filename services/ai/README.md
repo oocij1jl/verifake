@@ -45,6 +45,16 @@
 - speech_segments는 hard filter가 아니며, window별 `speech_overlap_sec`, `speech_coverage_ratio`, `has_speech` 계산에만 사용합니다.
 - AntiDeepfake 모델 추론, fake/real score 계산, suspicious segment merge는 포함하지 않습니다.
 
+## 오디오 AntiDeepfake window inference
+
+- stage 4 inference CLI는 `services/ai/audio_pipeline/audio_inference.py`에 둡니다.
+- 실행 예시:
+  - `python -m services.ai.audio_pipeline.audio_inference --windows-json outputs/audio/audio_windows_result.json --checkpoint-path services/ai/checkpoints/audio/antideepfake/mms_300m.ckpt --json-output outputs/audio/audio_inference_result.json --device cpu`
+- 이 단계는 stage 3의 `audio_windows_result.json`을 읽고, normalized wav에서 window clip을 추출한 뒤 AntiDeepfake를 window 단위로 호출합니다.
+- `has_speech=false` 또는 `speech_coverage_ratio < 0.05` 인 window는 score를 계산하지 않고 skip 상태만 남깁니다.
+- `audio_fake_prob_like`는 calibrated probability가 아니라 softmax 기반 probability-like score입니다.
+- suspicious segment merge, 최종 audio JSON assembly, calibration, LLM 설명은 포함하지 않습니다.
+
 ### Dependency notes
 
 - Use `services/ai/antideepfake/requirements.txt` for the AntiDeepfake runtime.
