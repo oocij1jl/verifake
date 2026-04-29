@@ -92,6 +92,43 @@ class AudioAnalyzerTests(unittest.TestCase):
             self.assertEqual(audio_jobs_db[job_id]["status"], "SUCCEEDED")
             self.assertEqual(audio_jobs_db[job_id]["result"]["request_id"], job_id)
             self.assertEqual(audio_jobs_db[job_id]["returncode"], 0)
+            self.assertEqual(audio_jobs_db[job_id]["stage"], "audio_stage1")
+            self.assertIsNone(audio_jobs_db[job_id]["video_path"])
+
+    def test_run_audio_job_passes_original_input_to_stage1_without_split(self) -> None:
+        from services.backend.services.audio_analyzer import run_audio_job
+        from services.backend.tasks import audio_jobs_db, create_audio_job
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            fake_python = temp_path / "python.exe"
+            fake_python.write_text("", encoding="utf-8")
+            input_path = temp_path / "input.mp3"
+            input_path.write_text("audio", encoding="utf-8")
+            job_id = "job-original"
+            result_path = Path("storage/jobs") / job_id / "audio" / "audio_stage1_result.json"
+            audio_jobs_db.clear()
+            create_audio_job(job_id, str(input_path), f"storage/jobs/{job_id}/audio")
+            captured_commands: list[list[str]] = []
+
+            def fake_run(command: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+                captured_commands.append(command)
+                result_path.parent.mkdir(parents=True, exist_ok=True)
+                result_path.write_text(json.dumps({"request_id": job_id, "evidence_level": "sufficient"}), encoding="utf-8")
+                return subprocess.CompletedProcess(command, 0, stdout="ok", stderr="")
+
+            with patch.dict("os.environ", {"VERIFAKE_AI_PYTHON": str(fake_python)}, clear=False), patch(
+                "services.backend.services.audio_analyzer.os.access",
+                return_value=True,
+            ), patch(
+                "services.backend.services.audio_analyzer.subprocess.run",
+                side_effect=fake_run,
+            ):
+                run_audio_job(job_id, input_path)
+
+            self.assertEqual(len(captured_commands), 1)
+            self.assertIn("--input", captured_commands[0])
+            self.assertIn(str(input_path), captured_commands[0])
 
     def test_run_audio_job_stores_failure_state(self) -> None:
         from services.backend.services.audio_analyzer import run_audio_job
@@ -142,9 +179,6 @@ class AudioAnalyzerTests(unittest.TestCase):
                 "services.backend.services.audio_analyzer.os.access",
                 return_value=True,
             ), patch(
-                "services.backend.services.audio_analyzer.separate_streams",
-                return_value=("storage/video/job-3_video.mp4", "storage/audio/job-3_audio.wav"),
-            ), patch(
                 "services.backend.services.audio_analyzer.subprocess.run",
                 side_effect=timeout_exc,
             ):
@@ -153,32 +187,6 @@ class AudioAnalyzerTests(unittest.TestCase):
             self.assertEqual(audio_jobs_db["job-3"]["status"], "TIMED_OUT")
             self.assertIn("timeout", audio_jobs_db["job-3"]["error"].lower())
             self.assertEqual(audio_jobs_db["job-3"]["stage"], "audio_stage1")
-
-    def test_run_audio_job_split_failure_preserves_split_stage(self) -> None:
-        from services.backend.services.audio_analyzer import run_audio_job
-        from services.backend.tasks import audio_jobs_db, create_audio_job
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            fake_python = temp_path / "python.exe"
-            fake_python.write_text("", encoding="utf-8")
-            input_path = temp_path / "input.wav"
-            input_path.write_text("wav", encoding="utf-8")
-            audio_jobs_db.clear()
-            create_audio_job("job-4", str(input_path), "storage/jobs/job-4/audio")
-
-            with patch.dict("os.environ", {"VERIFAKE_AI_PYTHON": str(fake_python)}, clear=False), patch(
-                "services.backend.services.audio_analyzer.os.access",
-                return_value=True,
-            ), patch(
-                "services.backend.services.audio_analyzer.separate_streams",
-                side_effect=RuntimeError("split failed"),
-            ):
-                run_audio_job("job-4", input_path)
-
-            self.assertEqual(audio_jobs_db["job-4"]["status"], "FAILED")
-            self.assertEqual(audio_jobs_db["job-4"]["stage"], "split")
-            self.assertIn("split failed", audio_jobs_db["job-4"]["error"])
 
     def test_run_audio_job_missing_result_file_marks_failed(self) -> None:
         from services.backend.services.audio_analyzer import run_audio_job
@@ -196,9 +204,6 @@ class AudioAnalyzerTests(unittest.TestCase):
             with patch.dict("os.environ", {"VERIFAKE_AI_PYTHON": str(fake_python)}, clear=False), patch(
                 "services.backend.services.audio_analyzer.os.access",
                 return_value=True,
-            ), patch(
-                "services.backend.services.audio_analyzer.separate_streams",
-                return_value=("storage/video/job-5_video.mp4", "storage/audio/job-5_audio.wav"),
             ), patch(
                 "services.backend.services.audio_analyzer.subprocess.run",
                 return_value=subprocess.CompletedProcess(["cmd"], 0, stdout="ok", stderr=""),
@@ -232,9 +237,6 @@ class AudioAnalyzerTests(unittest.TestCase):
             with patch.dict("os.environ", {"VERIFAKE_AI_PYTHON": str(fake_python)}, clear=False), patch(
                 "services.backend.services.audio_analyzer.os.access",
                 return_value=True,
-            ), patch(
-                "services.backend.services.audio_analyzer.separate_streams",
-                return_value=(f"storage/video/{job_id}_video.mp4", f"storage/audio/{job_id}_audio.wav"),
             ), patch(
                 "services.backend.services.audio_analyzer.subprocess.run",
                 side_effect=fake_run,

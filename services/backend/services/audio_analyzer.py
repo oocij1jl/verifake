@@ -6,7 +6,6 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-from services.backend.processor import separate_streams
 from services.backend.tasks import get_audio_job, update_audio_job
 
 
@@ -65,42 +64,6 @@ def run_audio_job(job_id: str, input_path: Path) -> None:
     started_at = datetime.now().isoformat()
     try:
         python_executable = get_audio_python()
-        update_audio_job(job_id, status="SPLITTING", stage="split", started_at=started_at)
-        try:
-            video_path, audio_path = separate_streams(input_path, job_id)
-        except subprocess.TimeoutExpired as exc:
-            update_audio_job(
-                job_id,
-                status="TIMED_OUT",
-                stage="split",
-                stdout=_truncate_log(exc.stdout),
-                stderr=_truncate_log(exc.stderr),
-                error="audio/video split timeout",
-                finished_at=datetime.now().isoformat(),
-            )
-            return
-        except subprocess.CalledProcessError as exc:
-            update_audio_job(
-                job_id,
-                status="FAILED",
-                stage="split",
-                stdout=_truncate_log(getattr(exc, "stdout", None)),
-                stderr=_truncate_log(getattr(exc, "stderr", None)),
-                returncode=exc.returncode,
-                error=_truncate_log(getattr(exc, "stderr", None)) or str(exc),
-                finished_at=datetime.now().isoformat(),
-            )
-            return
-        except Exception as exc:
-            update_audio_job(
-                job_id,
-                status="FAILED",
-                stage="split",
-                error=str(exc),
-                finished_at=datetime.now().isoformat(),
-            )
-            return
-
         output_dir = Path("storage/jobs") / job_id / "audio"
         output_dir.mkdir(parents=True, exist_ok=True)
         result_path = output_dir / RESULT_FILENAME
@@ -109,15 +72,15 @@ def run_audio_job(job_id: str, input_path: Path) -> None:
             job_id,
             status="ANALYZING",
             stage="audio_stage1",
-            video_path=video_path,
-            audio_path=audio_path,
+            audio_path=str(input_path.resolve()),
             artifacts_dir=str(output_dir),
             result_path=str(result_path),
+            started_at=started_at,
         )
 
         command = build_audio_stage1_command(
             python_executable=python_executable,
-            input_path=Path(audio_path),
+            input_path=input_path.resolve(),
             output_dir=output_dir,
             job_id=job_id,
         )
