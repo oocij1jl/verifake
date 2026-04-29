@@ -35,6 +35,16 @@
 - `silero_vad` 가 설치되어 있으면 우선 사용하고, 없으면 energy 기반 fallback으로 동작합니다.
 - sliding window 생성, AntiDeepfake 모델 추론, fake/real score 계산은 포함하지 않습니다.
 
+## 오디오 sliding window metadata
+
+- stage 3 windowing CLI는 `services/ai/audio_pipeline/audio_windowing.py`에 둡니다.
+- 실행 예시:
+  - `python -m services.ai.audio_pipeline.audio_windowing --vad-json outputs/audio/audio_vad_result.json --json-output outputs/audio/audio_windows_result.json`
+  - `python -m services.ai.audio_pipeline.audio_windowing --input-wav outputs/audio/normalized/sample_16k_mono.wav --window-sec 4.0 --hop-sec 2.0 --json-output outputs/audio/audio_windows_result.json`
+- 이 단계는 normalized wav 전체 타임라인 기준 overlapping window를 생성하고, 각 window의 speech overlap metadata만 계산합니다.
+- speech_segments는 hard filter가 아니며, window별 `speech_overlap_sec`, `speech_coverage_ratio`, `has_speech` 계산에만 사용합니다.
+- AntiDeepfake 모델 추론, fake/real score 계산, suspicious segment merge는 포함하지 않습니다.
+
 ### Dependency notes
 
 - Use `services/ai/antideepfake/requirements.txt` for the AntiDeepfake runtime.
