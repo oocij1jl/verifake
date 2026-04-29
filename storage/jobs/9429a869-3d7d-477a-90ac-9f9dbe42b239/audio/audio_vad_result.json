@@ -1,0 +1,49 @@
+{
+  "audio_vad": {
+    "input_wav_path": "C:\\project\\verifake\\storage\\jobs\\9429a869-3d7d-477a-90ac-9f9dbe42b239\\audio\\normalized\\fixed_sample_audio_16k_mono.wav",
+    "vad_method": "energy_fallback",
+    "total_duration_sec": 9.659562,
+    "human_speech_detected": true,
+    "speech_segments": [
+      {
+        "start": 0.04,
+        "end": 3.94,
+        "duration": 3.9,
+        "confidence": null,
+        "method": "energy_fallback"
+      },
+      {
+        "start": 4.44,
+        "end": 9.55,
+        "duration": 5.11,
+        "confidence": null,
+        "method": "energy_fallback"
+      }
+    ],
+    "speech_stats": {
+      "speech_duration_sec": 9.01,
+      "silence_duration_sec": 0.649563,
+      "speech_ratio": 0.932754,
+      "silence_ratio": 0.067246,
+      "pause_count": 1,
+      "leading_silence": 0.04,
+      "trailing_silence": 0.109562,
+      "breathing_like_pattern": {
+        "detected": true,
+        "method": "vad_gap_heuristic",
+        "candidate_gap_count": 1,
+        "candidate_gap_durations_sec": [
+          0.5
+        ]
+      },
+      "breathing_like_pattern_note": "approximate gap-based heuristic derived from detected speech pauses"
+    },
+    "quality_flags": [
+      "ENERGY_FALLBACK_VAD_USED"
+    ]
+  },
+  "limits": {
+    "unsupported_reason": null,
+    "low_evidence_reason": null
+  }
+}

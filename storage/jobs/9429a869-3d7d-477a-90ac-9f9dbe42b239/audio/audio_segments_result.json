@@ -1,0 +1,56 @@
+{
+  "audio_summary": {
+    "input_wav_path": "C:\\project\\verifake\\storage\\jobs\\9429a869-3d7d-477a-90ac-9f9dbe42b239\\audio\\normalized\\fixed_sample_audio_16k_mono.wav",
+    "source_inference_json": "C:\\project\\verifake\\storage\\jobs\\9429a869-3d7d-477a-90ac-9f9dbe42b239\\audio\\audio_inference_result.json",
+    "source_windows_json": "C:\\project\\verifake\\storage\\jobs\\9429a869-3d7d-477a-90ac-9f9dbe42b239\\audio\\audio_windows_result.json",
+    "source_vad_json": "C:\\project\\verifake\\storage\\jobs\\9429a869-3d7d-477a-90ac-9f9dbe42b239\\audio\\audio_vad_result.json",
+    "model_name": "AntiDeepfake",
+    "suspicious_threshold": 0.5,
+    "top_k": 5,
+    "max_merge_gap_sec": 0.5,
+    "window_count": 4,
+    "scored_window_count": 4,
+    "skipped_window_count": 0,
+    "failed_window_count": 0,
+    "suspicious_window_count": 4,
+    "suspicious_segment_count": 1,
+    "score_summary": {
+      "audio_fake_prob_like_mean": 0.966334,
+      "audio_fake_prob_like_max": 0.997289,
+      "audio_fake_prob_like_variance": 0.001754,
+      "audio_fake_score_raw_mean": 2.034507,
+      "audio_fake_score_raw_max": 2.899939,
+      "audio_fake_score_raw_variance": 0.453696,
+      "suspicious_window_count": 4,
+      "suspicious_segment_count": 1
+    },
+    "top_suspicious_audio_segments": [
+      {
+        "segment_id": 0,
+        "start": 0.0,
+        "end": 9.659562,
+        "duration": 9.659562,
+        "window_ids": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "window_count": 4,
+        "max_fake_prob_like": 0.997289,
+        "mean_fake_prob_like": 0.966334,
+        "max_fake_score_raw": 2.899939,
+        "mean_fake_score_raw": 2.034507,
+        "score_variance": 0.001754,
+        "reason": "consecutive_windows_above_threshold"
+      }
+    ],
+    "quality_flags": [
+      "ENERGY_FALLBACK_VAD_USED"
+    ]
+  },
+  "limits": {
+    "unsupported_reason": null,
+    "low_evidence_reason": null
+  }
+}

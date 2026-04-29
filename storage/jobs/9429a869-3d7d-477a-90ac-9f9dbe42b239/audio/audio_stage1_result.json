@@ -1,0 +1,34 @@
+{
+  "request_id": "9429a869-3d7d-477a-90ac-9f9dbe42b239",
+  "file_path": "C:\\project\\verifake\\storage\\audio\\fixed_sample_audio.wav",
+  "original_metadata": {
+    "codec": "pcm_s16le",
+    "bitrate": 352800,
+    "duration_sec": 9.659501,
+    "sample_rate_hz": 22050,
+    "channel_count": 1
+  },
+  "audio_fake_score_raw": 2.0345068275928497,
+  "audio_real_score_raw": -2.1445252895355225,
+  "audio_fake_prob_like": 0.9663341698376231,
+  "audio_uncertainty": 0.007016,
+  "human_speech_detected": true,
+  "evidence_level": "sufficient",
+  "speech_duration_sec": 9.01,
+  "speech_ratio": 0.932754,
+  "silence_ratio": 0.067246,
+  "pause_count": 1,
+  "leading_silence_sec": 0.04,
+  "trailing_silence_sec": 0.109562,
+  "quality_flags": [],
+  "top_suspicious_audio_segments": [
+    {
+      "start_sec": 0.0,
+      "end_sec": 9.659562,
+      "fake_score_raw": 2.8999388217926025,
+      "real_score_raw": -3.0079562664031982,
+      "fake_prob_like": 0.9972894651533976,
+      "rank": 1
+    }
+  ]
+}

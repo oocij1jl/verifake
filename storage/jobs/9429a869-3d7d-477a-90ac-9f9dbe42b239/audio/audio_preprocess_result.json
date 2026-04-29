@@ -1,0 +1,36 @@
+{
+  "audio_preprocess": {
+    "input_path": "C:\\project\\verifake\\storage\\audio\\fixed_sample_audio.wav",
+    "file_extension": ".wav",
+    "normalized_wav_path": "C:\\project\\verifake\\storage\\jobs\\9429a869-3d7d-477a-90ac-9f9dbe42b239\\audio\\normalized\\fixed_sample_audio_16k_mono.wav",
+    "original": {
+      "codec": "pcm_s16le",
+      "bitrate": 352800,
+      "duration_sec": 9.659501,
+      "sample_rate": 22050,
+      "channel_count": 1,
+      "has_audio_stream": true,
+      "container_format": "wav",
+      "video_stream_exists": false,
+      "audio_stream_index": 0
+    },
+    "normalized": {
+      "format": "wav",
+      "codec": "pcm_s16le",
+      "sample_rate": 16000,
+      "channel_count": 1,
+      "duration_sec": 9.659562,
+      "file_size_bytes": 309184
+    },
+    "quality_metrics": {
+      "rms_level": 0.0890609472990036,
+      "clipping_ratio": 0.0,
+      "silence_ratio_estimate": 0.11143750040439201
+    },
+    "quality_flags": []
+  },
+  "limits": {
+    "unsupported_reason": null,
+    "low_evidence_reason": null
+  }
+}

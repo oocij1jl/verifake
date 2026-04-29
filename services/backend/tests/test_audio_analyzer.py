@@ -9,6 +9,18 @@ from unittest.mock import patch
 
 
 class AudioAnalyzerTests(unittest.TestCase):
+    def test_get_audio_device_defaults_to_cpu(self) -> None:
+        from services.backend.services.audio_analyzer import get_audio_device
+
+        with patch.dict("os.environ", {}, clear=False):
+            self.assertEqual(get_audio_device(), "cpu")
+
+    def test_get_audio_device_uses_env_override(self) -> None:
+        from services.backend.services.audio_analyzer import get_audio_device
+
+        with patch.dict("os.environ", {"VERIFAKE_AI_DEVICE": "cuda:0"}, clear=False):
+            self.assertEqual(get_audio_device(), "cuda:0")
+
     def test_missing_runtime_env_raises(self) -> None:
         from services.backend.services.audio_analyzer import get_audio_python
 
@@ -48,6 +60,7 @@ class AudioAnalyzerTests(unittest.TestCase):
             input_path=input_path,
             output_dir=output_dir,
             job_id="job-1",
+            device="cpu",
         )
 
         self.assertEqual(command[0], str(python_path))
@@ -58,6 +71,8 @@ class AudioAnalyzerTests(unittest.TestCase):
         self.assertIn(str(output_dir), command)
         self.assertIn("--request-id", command)
         self.assertIn("job-1", command)
+        self.assertIn("--device", command)
+        self.assertIn("cpu", command)
 
     def test_run_audio_job_succeeds_and_stores_result(self) -> None:
         from services.backend.services.audio_analyzer import run_audio_job
@@ -94,6 +109,76 @@ class AudioAnalyzerTests(unittest.TestCase):
             self.assertEqual(audio_jobs_db[job_id]["returncode"], 0)
             self.assertEqual(audio_jobs_db[job_id]["stage"], "audio_stage1")
             self.assertIsNone(audio_jobs_db[job_id]["video_path"])
+
+    def test_run_audio_job_passes_default_cpu_device(self) -> None:
+        from services.backend.services.audio_analyzer import run_audio_job
+        from services.backend.tasks import audio_jobs_db, create_audio_job
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            fake_python = temp_path / "python.exe"
+            fake_python.write_text("", encoding="utf-8")
+            input_path = temp_path / "input.wav"
+            input_path.write_text("wav", encoding="utf-8")
+            job_id = "job-device-default"
+            result_path = Path("storage/jobs") / job_id / "audio" / "audio_stage1_result.json"
+            audio_jobs_db.clear()
+            create_audio_job(job_id, str(input_path), f"storage/jobs/{job_id}/audio")
+            captured_commands: list[list[str]] = []
+
+            def fake_run(command: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+                captured_commands.append(command)
+                result_path.parent.mkdir(parents=True, exist_ok=True)
+                result_path.write_text(json.dumps({"request_id": job_id, "evidence_level": "sufficient"}), encoding="utf-8")
+                return subprocess.CompletedProcess(command, 0, stdout="ok", stderr="")
+
+            with patch.dict("os.environ", {"VERIFAKE_AI_PYTHON": str(fake_python)}, clear=False), patch(
+                "services.backend.services.audio_analyzer.os.access",
+                return_value=True,
+            ), patch(
+                "services.backend.services.audio_analyzer.subprocess.run",
+                side_effect=fake_run,
+            ):
+                run_audio_job(job_id, input_path)
+
+            self.assertEqual(len(captured_commands), 1)
+            self.assertIn("--device", captured_commands[0])
+            self.assertIn("cpu", captured_commands[0])
+
+    def test_run_audio_job_passes_env_device_override(self) -> None:
+        from services.backend.services.audio_analyzer import run_audio_job
+        from services.backend.tasks import audio_jobs_db, create_audio_job
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            fake_python = temp_path / "python.exe"
+            fake_python.write_text("", encoding="utf-8")
+            input_path = temp_path / "input.wav"
+            input_path.write_text("wav", encoding="utf-8")
+            job_id = "job-device-override"
+            result_path = Path("storage/jobs") / job_id / "audio" / "audio_stage1_result.json"
+            audio_jobs_db.clear()
+            create_audio_job(job_id, str(input_path), f"storage/jobs/{job_id}/audio")
+            captured_commands: list[list[str]] = []
+
+            def fake_run(command: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+                captured_commands.append(command)
+                result_path.parent.mkdir(parents=True, exist_ok=True)
+                result_path.write_text(json.dumps({"request_id": job_id, "evidence_level": "sufficient"}), encoding="utf-8")
+                return subprocess.CompletedProcess(command, 0, stdout="ok", stderr="")
+
+            with patch.dict("os.environ", {"VERIFAKE_AI_PYTHON": str(fake_python), "VERIFAKE_AI_DEVICE": "cuda:0"}, clear=False), patch(
+                "services.backend.services.audio_analyzer.os.access",
+                return_value=True,
+            ), patch(
+                "services.backend.services.audio_analyzer.subprocess.run",
+                side_effect=fake_run,
+            ):
+                run_audio_job(job_id, input_path)
+
+            self.assertEqual(len(captured_commands), 1)
+            self.assertIn("--device", captured_commands[0])
+            self.assertIn("cuda:0", captured_commands[0])
 
     def test_run_audio_job_passes_original_input_to_stage1_without_split(self) -> None:
         from services.backend.services.audio_analyzer import run_audio_job

@@ -1,0 +1,55 @@
+{
+  "audio_windows": {
+    "input_wav_path": "C:\\project\\verifake\\storage\\jobs\\9429a869-3d7d-477a-90ac-9f9dbe42b239\\audio\\normalized\\fixed_sample_audio_16k_mono.wav",
+    "source_vad_json": "C:\\project\\verifake\\storage\\jobs\\9429a869-3d7d-477a-90ac-9f9dbe42b239\\audio\\audio_vad_result.json",
+    "total_duration_sec": 9.659562,
+    "window_sec": 4.0,
+    "hop_sec": 2.0,
+    "window_count": 4,
+    "windows": [
+      {
+        "window_id": 0,
+        "start": 0.0,
+        "end": 4.0,
+        "duration": 4.0,
+        "speech_overlap_sec": 3.9,
+        "speech_coverage_ratio": 0.975,
+        "has_speech": true
+      },
+      {
+        "window_id": 1,
+        "start": 2.0,
+        "end": 6.0,
+        "duration": 4.0,
+        "speech_overlap_sec": 3.5,
+        "speech_coverage_ratio": 0.875,
+        "has_speech": true
+      },
+      {
+        "window_id": 2,
+        "start": 4.0,
+        "end": 8.0,
+        "duration": 4.0,
+        "speech_overlap_sec": 3.56,
+        "speech_coverage_ratio": 0.89,
+        "has_speech": true
+      },
+      {
+        "window_id": 3,
+        "start": 6.0,
+        "end": 9.659562,
+        "duration": 3.659562,
+        "speech_overlap_sec": 3.55,
+        "speech_coverage_ratio": 0.970061,
+        "has_speech": true
+      }
+    ],
+    "quality_flags": [
+      "ENERGY_FALLBACK_VAD_USED"
+    ]
+  },
+  "limits": {
+    "unsupported_reason": null,
+    "low_evidence_reason": null
+  }
+}

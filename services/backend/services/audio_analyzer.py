@@ -12,6 +12,7 @@ from services.backend.tasks import get_audio_job, update_audio_job
 AUDIO_STAGE1_TIMEOUT_SEC = 30 * 60
 RESULT_FILENAME = "audio_stage1_result.json"
 LOG_LIMIT_CHARS = 16000
+DEFAULT_AI_DEVICE = "cpu"
 
 
 def _truncate_log(value: str | bytes | None) -> str:
@@ -44,8 +45,19 @@ def validate_audio_python() -> Path:
     return get_audio_python()
 
 
-def build_audio_stage1_command(*, python_executable: Path, input_path: Path, output_dir: Path, job_id: str) -> list[str]:
-    return [
+def get_audio_device() -> str:
+    return os.getenv("VERIFAKE_AI_DEVICE", DEFAULT_AI_DEVICE).strip() or DEFAULT_AI_DEVICE
+
+
+def build_audio_stage1_command(
+    *,
+    python_executable: Path,
+    input_path: Path,
+    output_dir: Path,
+    job_id: str,
+    device: str,
+) -> list[str]:
+    command = [
         str(python_executable),
         "-m",
         "services.ai.audio_pipeline.audio_stage1",
@@ -58,12 +70,16 @@ def build_audio_stage1_command(*, python_executable: Path, input_path: Path, out
         "--json-output",
         str(output_dir / RESULT_FILENAME),
     ]
+    if device:
+        command.extend(["--device", device])
+    return command
 
 
 def run_audio_job(job_id: str, input_path: Path) -> None:
     started_at = datetime.now().isoformat()
     try:
         python_executable = get_audio_python()
+        device = get_audio_device()
         output_dir = Path("storage/jobs") / job_id / "audio"
         output_dir.mkdir(parents=True, exist_ok=True)
         result_path = output_dir / RESULT_FILENAME
@@ -83,6 +99,7 @@ def run_audio_job(job_id: str, input_path: Path) -> None:
             input_path=input_path.resolve(),
             output_dir=output_dir,
             job_id=job_id,
+            device=device,
         )
 
         completed = subprocess.run(
