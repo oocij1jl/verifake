@@ -15,6 +15,7 @@ __all__ = [
     "run_audio_vad",
     "run_audio_windowing",
     "run_audio_inference",
+    "run_audio_segments",
     "run_antideepfake_inference",
 ]
 
@@ -38,6 +39,10 @@ def __getattr__(name: str):
 
     if name == "run_audio_inference":
         module = import_module(".audio_inference", __name__)
+        return getattr(module, name)
+
+    if name == "run_audio_segments":
+        module = import_module(".audio_segments", __name__)
         return getattr(module, name)
 
     if name in {

@@ -55,6 +55,17 @@
 - `audio_fake_prob_like`는 calibrated probability가 아니라 softmax 기반 probability-like score입니다.
 - suspicious segment merge, 최종 audio JSON assembly, calibration, LLM 설명은 포함하지 않습니다.
 
+## 오디오 suspicious segment merge / summary
+
+- stage 5 summary CLI는 `services/ai/audio_pipeline/audio_segments.py`에 둡니다.
+- 실행 예시:
+  - `python -m services.ai.audio_pipeline.audio_segments --inference-json outputs/audio/audio_inference_result.json --json-output outputs/audio/audio_segments_result.json --suspicious-threshold 0.5 --top-k 5 --max-merge-gap-sec 0.5`
+- 이 단계는 stage 4의 `audio_inference_result.json`만 읽고, `inference_status == "scored"` 인 window들 중 `audio_fake_prob_like >= suspicious_threshold` 인 window를 suspicious 후보로 사용합니다.
+- suspicious window는 시간순으로 정렬한 뒤, 겹치거나 gap이 `max_merge_gap_sec` 이하이면 하나의 suspicious segment로 병합합니다.
+- `audio_fake_prob_like`는 calibrated probability가 아니라 probability-like score이며, threshold 0.5는 초기 heuristic 기준입니다.
+- 이 단계의 intermediate segment 필드는 `start`, `end`, `duration`을 사용합니다. 최종 fusion / LLM 전달 단계에서 필요하면 `start_sec`, `end_sec` 같은 최종 schema 필드로 변환합니다.
+- 이 단계는 top suspicious audio segments와 전체 audio score summary만 생성하며, final overall/video/audio fusion JSON은 생성하지 않습니다.
+
 ### Dependency notes
 
 - Use `services/ai/antideepfake/requirements.txt` for the AntiDeepfake runtime.
