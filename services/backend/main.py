@@ -1,3 +1,5 @@
+# pyright: reportMissingImports=false
+
 import static_ffmpeg
 static_ffmpeg.add_paths()
 
@@ -11,3 +13,4 @@ app = FastAPI(
 )
 
 app.include_router(video.router, prefix="/api/v1")
+app.include_router(video.router, prefix="/media")

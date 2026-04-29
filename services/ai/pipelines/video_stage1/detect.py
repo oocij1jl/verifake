@@ -68,6 +68,10 @@ def run_video_stage1_detection(preprocessing_json_path: str) -> dict[str, Any]:
     face_scores = predict_face_crops(
         face_items,
         batch_size=config["detector"]["batch_size"],
+        use_mock=bool(config["detector"].get("use_mock", True)),
+        weights_path=config["detector"].get("weights_path"),
+        device=str(config["detector"].get("device", "auto")),
+        config_path=config["detector"].get("config_path"),
     )
 
     frame_scores = aggregate_face_scores_to_frame_scores(face_scores)

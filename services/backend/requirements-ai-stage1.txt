@@ -1,0 +1,6 @@
+-r requirements-dev.txt
+pyyaml
+torch
+torchvision
+efficientnet-pytorch
+Pillow
