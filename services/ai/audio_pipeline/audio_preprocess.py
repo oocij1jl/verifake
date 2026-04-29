@@ -95,6 +95,8 @@ def _parse_optional_float(value: Any) -> float | None:
 def _run_ffprobe(input_path: Path) -> dict[str, Any]:
     ffprobe = shutil.which("ffprobe")
     if ffprobe is None:
+        if input_path.suffix.lower() == ".wav":
+            return _run_wave_probe(input_path)
         return _run_torchaudio_probe(input_path)
 
     command = [
@@ -130,7 +132,9 @@ def _run_ffprobe(input_path: Path) -> dict[str, Any]:
 
 
 def _run_torchaudio_probe(input_path: Path) -> dict[str, Any]:
-    import torchaudio
+    import importlib
+
+    torchaudio = importlib.import_module("torchaudio")
 
     try:
         info = torchaudio.info(str(input_path))
@@ -162,6 +166,43 @@ def _run_torchaudio_probe(input_path: Path) -> dict[str, Any]:
                 "index": 0,
                 "codec_type": "audio",
                 "codec_name": codec_name,
+                "bit_rate": estimated_bitrate,
+                "duration": duration_sec,
+                "sample_rate": sample_rate,
+                "channels": channel_count,
+            }
+        ],
+    }
+
+
+def _run_wave_probe(input_path: Path) -> dict[str, Any]:
+    try:
+        with wave.open(str(input_path), "rb") as handle:
+            sample_rate = handle.getframerate()
+            channel_count = handle.getnchannels()
+            bits_per_sample = handle.getsampwidth() * 8
+            frame_count = handle.getnframes()
+    except (wave.Error, OSError) as exc:
+        raise AudioPreprocessError(
+            f"wave 모듈로 오디오 메타데이터를 읽을 수 없습니다: {input_path}"
+        ) from exc
+
+    duration_sec = float(frame_count) / float(sample_rate) if sample_rate > 0 else None
+    estimated_bitrate = None
+    if sample_rate > 0 and channel_count > 0 and bits_per_sample > 0:
+        estimated_bitrate = sample_rate * channel_count * bits_per_sample
+
+    return {
+        "format": {
+            "format_name": "wav",
+            "bit_rate": estimated_bitrate,
+            "duration": duration_sec,
+        },
+        "streams": [
+            {
+                "index": 0,
+                "codec_type": "audio",
+                "codec_name": "pcm_s16le" if bits_per_sample == 16 else "unknown",
                 "bit_rate": estimated_bitrate,
                 "duration": duration_sec,
                 "sample_rate": sample_rate,
@@ -218,6 +259,9 @@ def _validate_input_file(input_path: Path) -> ProbeMetadata:
 def _normalize_audio(input_path: Path, output_path: Path) -> None:
     ffmpeg = shutil.which("ffmpeg")
     if ffmpeg is None:
+        if input_path.suffix.lower() == ".wav":
+            _normalize_wave_with_stdlib(input_path, output_path)
+            return
         _normalize_audio_with_torchaudio(input_path, output_path)
         return
 
@@ -250,7 +294,9 @@ def _normalize_audio(input_path: Path, output_path: Path) -> None:
 
 
 def _normalize_audio_with_torchaudio(input_path: Path, output_path: Path) -> None:
-    import torchaudio
+    import importlib
+
+    torchaudio = importlib.import_module("torchaudio")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     try:
@@ -280,6 +326,44 @@ def _normalize_audio_with_torchaudio(input_path: Path, output_path: Path) -> Non
         encoding="PCM_S",
         bits_per_sample=16,
     )
+
+
+def _normalize_wave_with_stdlib(input_path: Path, output_path: Path) -> None:
+    try:
+        with wave.open(str(input_path), "rb") as handle:
+            sample_rate = handle.getframerate()
+            channel_count = handle.getnchannels()
+            sample_width = handle.getsampwidth()
+            frame_count = handle.getnframes()
+            raw_frames = handle.readframes(frame_count)
+    except (wave.Error, OSError) as exc:
+        raise AudioPreprocessError(f"WAV 입력을 읽을 수 없습니다: {input_path}") from exc
+
+    if sample_width != 2:
+        raise AudioPreprocessError("stdlib WAV fallback은 16-bit PCM WAV만 지원합니다.")
+    if channel_count <= 0 or sample_rate <= 0:
+        raise AudioPreprocessError("입력 WAV 메타데이터가 올바르지 않습니다.")
+
+    waveform = np.frombuffer(raw_frames, dtype="<i2").astype(np.float32)
+    if channel_count > 1:
+        waveform = waveform.reshape(-1, channel_count).mean(axis=1)
+    waveform /= 32768.0
+
+    if sample_rate != NORMALIZED_SAMPLE_RATE and waveform.size > 0:
+        source_positions = np.arange(waveform.size, dtype=np.float32)
+        target_length = max(1, int(round(waveform.size * NORMALIZED_SAMPLE_RATE / sample_rate)))
+        target_positions = np.linspace(0.0, waveform.size - 1, target_length, dtype=np.float32)
+        waveform = np.interp(target_positions, source_positions, waveform).astype(np.float32)
+
+    waveform = np.clip(waveform, -1.0, 1.0)
+    pcm_waveform = np.round(waveform * 32767.0).astype("<i2")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with wave.open(str(output_path), "wb") as handle:
+        handle.setnchannels(NORMALIZED_CHANNELS)
+        handle.setsampwidth(2)
+        handle.setframerate(NORMALIZED_SAMPLE_RATE)
+        handle.writeframes(pcm_waveform.tobytes())
 
 
 def _read_pcm_waveform(wav_path: Path) -> tuple[np.ndarray, int]:

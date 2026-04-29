@@ -80,7 +80,9 @@ def _resolve_existing_file(path: str | Path, *, label: str) -> Path:
 
 
 def _read_audio_metadata(audio_path: Path) -> AudioFileMetadata:
-    import torchaudio
+    import importlib
+
+    torchaudio = importlib.import_module("torchaudio")
 
     info = torchaudio.info(str(audio_path))
     sample_rate = int(info.sample_rate)
@@ -100,7 +102,7 @@ def _read_audio_metadata(audio_path: Path) -> AudioFileMetadata:
 
 
 def _protocol_audio_path(audio_path: Path) -> str:
-    return f"$ROOT/{audio_path.as_posix().lstrip('/')}"
+    return str(audio_path.resolve().as_posix())
 
 
 def _write_protocol_csv(

@@ -172,7 +172,7 @@ class AudioWindowingTests(unittest.TestCase):
             loaded = json.loads(json_output.read_text(encoding="utf-8"))
             self.assertEqual(loaded, result)
             self.assertEqual(wav_path.stat().st_size, input_size)
-            all_files = sorted(str(path.relative_to(temp_path)) for path in temp_path.rglob("*") if path.is_file())
+            all_files = sorted(path.relative_to(temp_path).as_posix() for path in temp_path.rglob("*") if path.is_file())
             self.assertEqual(all_files, ["audio_vad_result.json", "outputs/audio_windows_result.json", "sample_16k_mono.wav"])
             self.assertTrue(all("fake_score" not in window for window in result["audio_windows"]["windows"]))
             self.assertTrue(all("real_score" not in window for window in result["audio_windows"]["windows"]))

@@ -4,11 +4,9 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
-import tempfile
 import wave
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 
@@ -25,6 +23,8 @@ ENERGY_THRESHOLD_FLOOR = 0.01
 ENERGY_NOISE_MULTIPLIER = 3.0
 MIN_SPEECH_SEGMENT_SEC = 0.2
 MIN_SILENCE_GAP_SEC = 0.3
+BREATH_GAP_MIN_SEC = 0.3
+BREATH_GAP_MAX_SEC = 2.0
 
 
 class AudioVadError(RuntimeError):
@@ -63,6 +63,8 @@ def _resolve_inputs(
         limits = dict(payload.get("limits", {}))
         return Path(wav_path).expanduser().resolve(), quality_flags, limits, str(preprocess_path)
 
+    if input_wav_path is None:
+        raise AudioVadError("--input-wav 경로가 비어 있습니다.")
     wav_path = Path(input_wav_path).expanduser().resolve()
     return wav_path, [], {"unsupported_reason": None, "low_evidence_reason": None}, None
 
@@ -108,9 +110,15 @@ def _read_waveform(wav_path: Path) -> tuple[np.ndarray, int]:
 
 def _silero_vad_segments(wav_path: Path) -> tuple[list[dict[str, Any]], str]:
     try:
-        from silero_vad import get_speech_timestamps, load_silero_vad, read_audio
+        import importlib
+
+        silero_vad = importlib.import_module("silero_vad")
     except ImportError as exc:
         raise AudioVadError("silero_vad_not_available") from exc
+
+    read_audio = silero_vad.read_audio
+    load_silero_vad = silero_vad.load_silero_vad
+    get_speech_timestamps = silero_vad.get_speech_timestamps
 
     audio = read_audio(str(wav_path), sampling_rate=16000)
     model = load_silero_vad()
@@ -248,6 +256,8 @@ def _compute_speech_stats(
         trailing_silence = round(total_duration_sec, 6)
         pause_count = 0
 
+    breathing_like_pattern = _build_breathing_like_pattern(speech_segments)
+
     return {
         "speech_duration_sec": speech_duration_sec,
         "silence_duration_sec": silence_duration_sec,
@@ -256,8 +266,29 @@ def _compute_speech_stats(
         "pause_count": pause_count,
         "leading_silence": leading_silence,
         "trailing_silence": trailing_silence,
-        "breathing_like_pattern": None,
-        "breathing_like_pattern_note": "not_implemented_in_stage_2",
+        "breathing_like_pattern": breathing_like_pattern,
+        "breathing_like_pattern_note": "approximate gap-based heuristic derived from detected speech pauses",
+    }
+
+
+def _build_breathing_like_pattern(speech_segments: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if len(speech_segments) < 2:
+        return None
+
+    candidate_gap_durations: list[float] = []
+    for previous, current in zip(speech_segments, speech_segments[1:]):
+        gap_duration_sec = float(current["start"]) - float(previous["end"])
+        if BREATH_GAP_MIN_SEC <= gap_duration_sec <= BREATH_GAP_MAX_SEC:
+            candidate_gap_durations.append(round(gap_duration_sec, 6))
+
+    if not candidate_gap_durations:
+        return None
+
+    return {
+        "detected": True,
+        "method": "vad_gap_heuristic",
+        "candidate_gap_count": len(candidate_gap_durations),
+        "candidate_gap_durations_sec": candidate_gap_durations,
     }
 
 

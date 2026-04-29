@@ -10,6 +10,7 @@ from unittest.mock import patch
 from services.ai.audio_pipeline.antideepfake import (
     AudioFileMetadata,
     DEFAULT_CHECKPOINT_PATH,
+    DEFAULT_HPARAMS_PATH,
     _parse_score_row,
     _write_protocol_csv,
     run_antideepfake_inference,
@@ -48,7 +49,7 @@ class AntiDeepfakeWrapperTests(unittest.TestCase):
 
             self.assertEqual(len(rows), 2)
             self.assertEqual({row["Label"] for row in rows}, {"fake", "real"})
-            self.assertTrue(all(row["Path"].startswith("$ROOT/") for row in rows))
+            self.assertTrue(all(Path(row["Path"]).is_absolute() for row in rows))
 
     def test_parse_score_row_reads_expected_probabilities(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -91,6 +92,11 @@ class AntiDeepfakeWrapperTests(unittest.TestCase):
                 )
 
             self.assertIn(str(DEFAULT_CHECKPOINT_PATH), str(context.exception))
+
+    def test_default_hparams_path_exists_in_repo(self) -> None:
+        self.assertTrue(DEFAULT_HPARAMS_PATH.exists())
+        self.assertEqual(DEFAULT_HPARAMS_PATH.suffix, ".yaml")
+        self.assertIn("services", str(DEFAULT_HPARAMS_PATH))
 
     def test_run_inference_invokes_vendored_script_and_parses_scores(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -149,7 +155,7 @@ class AntiDeepfakeWrapperTests(unittest.TestCase):
             self.assertEqual(result.file_path, str(audio_path.resolve()))
             self.assertEqual(result.predicted_label, "real")
             self.assertIsNotNone(result.score_csv_path)
-            self.assertTrue(result.score_csv_path.endswith("req-3/output/evaluation_score.csv"))
+            self.assertTrue(result.score_csv_path.replace("\\", "/").endswith("req-3/output/evaluation_score.csv"))
             self.assertEqual(mock_run.call_count, 1)
 
 

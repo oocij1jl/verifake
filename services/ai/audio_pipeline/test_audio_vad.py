@@ -138,6 +138,48 @@ class AudioVadTests(unittest.TestCase):
             self.assertEqual(result["limits"]["low_evidence_reason"], "too_little_detected_speech")
             self.assertGreater(len(result["audio_vad"]["speech_segments"]), 0)
 
+    def test_breathing_like_pattern_uses_gap_heuristic(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            wav_path = temp_path / "breathy_16k_mono.wav"
+            _write_segmented_wav(
+                wav_path,
+                pattern=[("speech", 1.0), ("silence", 0.6), ("speech", 0.9)],
+            )
+
+            with patch("services.ai.audio_pipeline.audio_vad._silero_vad_segments", side_effect=AudioVadError("silero_vad_not_available")):
+                result = run_audio_vad(input_wav_path=wav_path)
+
+            pattern = result["audio_vad"]["speech_stats"]["breathing_like_pattern"]
+            self.assertIsNotNone(pattern)
+            self.assertTrue(pattern["detected"])
+            self.assertEqual(pattern["candidate_gap_count"], 1)
+
+    def test_breathing_like_pattern_is_none_for_continuous_speech(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            wav_path = temp_path / "continuous_16k_mono.wav"
+            _write_segmented_wav(wav_path, pattern=[("speech", 2.0)])
+
+            with patch("services.ai.audio_pipeline.audio_vad._silero_vad_segments", side_effect=AudioVadError("silero_vad_not_available")):
+                result = run_audio_vad(input_wav_path=wav_path)
+
+            self.assertIsNone(result["audio_vad"]["speech_stats"]["breathing_like_pattern"])
+
+    def test_breathing_like_pattern_ignores_short_gaps(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            wav_path = temp_path / "short_gap_16k_mono.wav"
+            _write_segmented_wav(
+                wav_path,
+                pattern=[("speech", 1.0), ("silence", 0.1), ("speech", 1.0)],
+            )
+
+            with patch("services.ai.audio_pipeline.audio_vad._silero_vad_segments", side_effect=AudioVadError("silero_vad_not_available")):
+                result = run_audio_vad(input_wav_path=wav_path)
+
+            self.assertIsNone(result["audio_vad"]["speech_stats"]["breathing_like_pattern"])
+
     def test_non_normalized_wav_fails_clearly(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -163,7 +205,7 @@ class AudioVadTests(unittest.TestCase):
             self.assertEqual(loaded, result)
             self.assertTrue(wav_path.exists())
             self.assertEqual(wav_path.stat().st_size, input_size)
-            all_files = sorted(str(path.relative_to(temp_path)) for path in temp_path.rglob("*") if path.is_file())
+            all_files = sorted(path.relative_to(temp_path).as_posix() for path in temp_path.rglob("*") if path.is_file())
             self.assertEqual(all_files, ["outputs/audio_vad_result.json", "sample_16k_mono.wav"])
 
 
