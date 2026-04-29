@@ -13,6 +13,31 @@ from services.backend.routers import video
 client = TestClient(app)
 
 
+def test_main_only_exposes_stage1_runtime_routes() -> None:
+    route_paths = {route.path for route in app.routes}
+
+    assert "/api/v1/video-stage1/preprocess" in route_paths
+    assert "/api/v1/video-stage1/detect" in route_paths
+    assert "/media/video-stage1/preprocess" in route_paths
+    assert "/media/video-stage1/detect" in route_paths
+
+    assert "/api/v1/instagram" not in route_paths
+    assert "/api/v1/video" not in route_paths
+    assert "/api/v1/status/{task_id}" not in route_paths
+    assert "/media/instagram" not in route_paths
+    assert "/media/video" not in route_paths
+    assert "/media/status/{task_id}" not in route_paths
+
+
+def test_legacy_video_ingest_routes_are_not_exposed() -> None:
+    assert client.post("/api/v1/instagram").status_code == 404
+    assert client.post("/api/v1/video").status_code == 404
+    assert client.get("/api/v1/status/some-id").status_code == 404
+    assert client.post("/media/instagram").status_code == 404
+    assert client.post("/media/video").status_code == 404
+    assert client.get("/media/status/some-id").status_code == 404
+
+
 def test_main_exposes_media_stage1_preprocess_route(
     monkeypatch,
     tmp_path: Path,

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from services.ai.pipelines.video_stage1 import detect
+from services.ai.pipelines.video_stage1.config import load_stage1_config as load_stage1_config_from_config
 from services.ai.pipelines.video_stage1.schemas import (
     DetectionOutput,
     ResultOutput,
@@ -21,6 +23,10 @@ def test_load_stage1_config_returns_stage1_b_defaults() -> None:
     assert config["segment_merge"]["top_k"] == 5
     assert config["video_score"]["aggregation_method"] == "topk_mean"
     assert config["video_score"]["topk_frame_count"] == 10
+
+
+def test_detect_uses_shared_stage1_config_loader() -> None:
+    assert detect.load_stage1_config is load_stage1_config_from_config
 
 
 def test_detection_output_accepts_minimal_valid_payload() -> None:

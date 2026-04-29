@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 
 from services.ai.common.json_io import read_json
+from services.ai.pipelines.video_stage1 import detect
 from services.ai.pipelines.video_stage1 import preprocess
 from services.ai.pipelines.video_stage1.detect import run_video_stage1_detection
 
@@ -54,6 +55,7 @@ def test_stage1_a_output_can_feed_stage1_b_detection(
                 "model_name": "EfficientNet-B4",
                 "score_field": "raw_fake_score",
                 "batch_size": 16,
+                "use_mock": True,
             },
             "segment_merge": {
                 "score_threshold": 0.6,
@@ -157,6 +159,7 @@ def test_stage1_a_output_can_feed_stage1_b_detection(
         }
 
     monkeypatch.setattr(preprocess, "load_stage1_config", fake_load_config)
+    monkeypatch.setattr(detect, "load_stage1_config", fake_load_config)
     monkeypatch.setattr(preprocess, "_normalize_video", fake_normalize_video)
     monkeypatch.setattr(
         preprocess,
@@ -184,6 +187,8 @@ def test_stage1_a_output_can_feed_stage1_b_detection(
 
     assert preprocessing["job_id"] == "job_test_integration"
     assert saved_preprocessing["frames"][0]["faces"][0]["crop_path"].endswith("frame_000000_face_00.jpg")
+    assert saved_preprocessing["input"]["internal_format"] == "mp4"
+    assert saved_preprocessing["input"]["normalized_video_path"].endswith("normalized.mp4")
     assert detection["job_id"] == "job_test_integration"
     assert saved_result["job_id"] == "job_test_integration"
     assert 0.0 <= saved_result["detection"]["video_score"]["final_fake_score"] <= 1.0

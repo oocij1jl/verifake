@@ -11,13 +11,13 @@ from typing import Any
 from services.ai.inference.video_stage1.deepfakebench_efficientnet_b4 import (
     predict_face_crops,
 )
+from services.ai.pipelines.video_stage1.config import load_stage1_config
 from services.ai.pipelines.video_stage1.scoring import (
     aggregate_face_scores_to_frame_scores,
 )
 from services.ai.pipelines.video_stage1.schemas import (
     DetectionOutput,
     ResultOutput,
-    load_stage1_config,
 )
 from services.ai.pipelines.video_stage1.segment_merge import (
     merge_suspicious_frames,
