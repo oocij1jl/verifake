@@ -110,8 +110,23 @@ def _run_ffprobe(input_path: Path) -> dict[str, Any]:
         "json",
         str(input_path),
     ]
-    completed = subprocess.run(command, check=True, capture_output=True, text=True)
-    return json.loads(completed.stdout)
+    try:
+        completed = subprocess.run(command, check=True, capture_output=True, text=True)
+    except subprocess.CalledProcessError as exc:
+        stderr = exc.stderr.strip() if exc.stderr else ""
+        detail = f" stderr: {stderr}" if stderr else ""
+        raise AudioPreprocessError(
+            "오디오 메타데이터를 읽을 수 없습니다. "
+            f"ffprobe 실패: {input_path}{detail}"
+        ) from exc
+
+    try:
+        return json.loads(completed.stdout)
+    except json.JSONDecodeError as exc:
+        raise AudioPreprocessError(
+            "ffprobe 출력 JSON을 파싱할 수 없습니다. "
+            f"input: {input_path}"
+        ) from exc
 
 
 def _run_torchaudio_probe(input_path: Path) -> dict[str, Any]:

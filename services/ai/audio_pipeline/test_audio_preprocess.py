@@ -7,10 +7,12 @@ import tempfile
 import unittest
 import wave
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 
 from services.ai.audio_pipeline.audio_preprocess import (
+    AudioPreprocessError,
     NoAudioStreamError,
     preprocess_audio,
 )
@@ -106,6 +108,28 @@ class AudioPreprocessTests(unittest.TestCase):
             missing_path = Path(temp_dir) / "missing.wav"
             with self.assertRaises(FileNotFoundError):
                 preprocess_audio(missing_path, Path(temp_dir) / "outputs")
+
+    def test_ffprobe_failure_raises_audio_preprocess_error(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            input_path = temp_path / "broken.wav"
+            input_path.write_bytes(b"not-a-real-wave")
+
+            with patch(
+                "services.ai.audio_pipeline.audio_preprocess.shutil.which",
+                return_value="/usr/bin/ffprobe",
+            ), patch(
+                "services.ai.audio_pipeline.audio_preprocess.subprocess.run",
+                side_effect=subprocess.CalledProcessError(
+                    1,
+                    ["ffprobe", str(input_path)],
+                    stderr="invalid data found",
+                ),
+            ):
+                with self.assertRaises(AudioPreprocessError) as context:
+                    preprocess_audio(input_path, temp_path / "outputs")
+
+            self.assertIn("ffprobe 실패", str(context.exception))
 
     def test_video_without_audio_stream_raises_clear_error(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
