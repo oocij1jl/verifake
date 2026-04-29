@@ -3,6 +3,7 @@ static_ffmpeg.add_paths()
 
 from fastapi import FastAPI
 from services.backend.routers import media
+from services.backend.routers import audio
 from services.backend import download_service
 
 app = FastAPI(
@@ -13,3 +14,4 @@ app = FastAPI(
 
 app.include_router(media.router, prefix="/media")
 app.include_router(download_service.router, prefix="/api/v1")
+app.include_router(audio.router, prefix="/api/v1/audio")

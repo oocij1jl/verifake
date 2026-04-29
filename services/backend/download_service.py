@@ -1,12 +1,10 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from uuid import uuid4
 from datetime import datetime
-import instaloader
+
+from services.backend.tasks import create_upload_task, get_upload_task
 
 router = APIRouter()
-
-# 분석 상태 임시저장 딕셔너리 (DB로 교체 예정)
-tasks_db = {}
 
 #API 그룹화 요약
 @router.post("/share", summary="영상 업로드 및 수집", tags=["Upload"])
@@ -24,7 +22,7 @@ async def upload_video(
         # 실제 다운로드 로직은 별도 비동기 태스크로 분리 권장 (현재는 뼈대만 반영)
         print(f"[System] instaloader를 통해 {link} 수집 시작")
 
-    tasks_db[task_id] = {"status": "PENDING", "verdict": None}
+    create_upload_task(task_id)
 
     return {
         "task_id": task_id,
@@ -34,12 +32,13 @@ async def upload_video(
 
 @router.get("/status/{task_id}", summary="분석 상태 조회", tags=["Status"])
 async def get_status(task_id: str):
-    if task_id not in tasks_db:
+    task = get_upload_task(task_id)
+    if task is None:
         raise HTTPException(status_code=404, detail="해당 task_id를 찾을 수 없습니다.")
 
     return {
         "task_id": task_id,
-        "status": tasks_db[task_id]["status"],
-        "verdict": tasks_db[task_id]["verdict"],
+        "status": task["status"],
+        "verdict": task["verdict"],
         "timestamp": datetime.now().isoformat()
     }
